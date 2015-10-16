@@ -82,12 +82,20 @@ defmodule ParserCombinatorsTest do
     catch_error parse!(":foo::bar:", assignment)
   end
 
-  test "lookahead" do
-    flunk "TODO"
+  test "accepts via lookahead" do
+    assert ["<1,2>"] == parse! "<1,2>", check(tuple,~r/(.+)/)
   end
 
-  test "negative lookahead" do
-    flunk "TODO"
+  test "rejects via lookahead" do
+    catch_error parse!("derp", check(tuple,~r/(.+)/))
+  end
+
+  test "accepts via negative lookahead" do
+    assert ["derp"] == parse! "derp", prevent(tuple,~r/(.+)/)
+  end
+
+  test "reject via negative lookahead" do
+    catch_error parse!("<1,2>", prevent(tuple,~r/(.+)/))
   end
 
   test "more explicit failure modeling" do

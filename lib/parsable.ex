@@ -28,6 +28,14 @@ defmodule Parsable do
       {:transform, of, with}
     end
 
+    def check(condition, actual) do
+      {:check, condition, actual}
+    end
+
+    def prevent(condition, actual) do
+      {:prevent, condition, actual}
+    end
+
     defmacro transform(parser, match, do: block) do
       quote do
         transform unquote(parser), fn x ->
@@ -96,6 +104,22 @@ defmodule Parsable do
   def parse(source, {:transform, inner, transformation}) do
     { inner_result, rest } = parse source, inner
     { transformation.( inner_result ), rest }
+  end
+
+  def parse(source, {:check, condition, actual}) do
+    {_, _} = parse(source, condition)
+    parse(source, actual)
+  end
+
+  def parse(source, {:prevent, condition, actual}) do
+    #TODO This is just horrible, horrible stuff, which will hopefull go away in a second.
+    x = try_parse do
+      parse source, condition
+    else
+      :failed
+    end
+    :failed = x
+    parse(source, actual)
   end
 
   defp parse_into(source, target, result) do
