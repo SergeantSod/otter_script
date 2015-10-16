@@ -1,5 +1,3 @@
-#!/bin/env elixir
-
 defmodule Parsable do
 
   defmodule Factory do
@@ -24,8 +22,8 @@ defmodule Parsable do
       {:optional, of}
     end
 
-    def transform(of, with) do
-      {:transform, of, with}
+    def match(of, with) do
+      {:match, of, with}
     end
 
     def check(condition, actual) do
@@ -36,9 +34,15 @@ defmodule Parsable do
       {:prevent, condition, actual}
     end
 
-    defmacro transform(parser, match, do: block) do
+    defmacro lazy(parser_expression) do
       quote do
-        transform unquote(parser), fn x ->
+        {:lazy, fn -> unquote(parser_expression) end}
+      end
+    end
+
+    defmacro match(parser, match, do: block) do
+      quote do
+        match unquote(parser), fn x ->
           unquote(match) = x
           unquote(block)
         end
@@ -99,6 +103,10 @@ defmodule Parsable do
     end
   end
 
+  def parse(source, {:lazy, parser_lambda}) do
+    parse(source, parser_lambda.())
+  end
+
   def parse(source, {:many, of}) do
     parse_into source, of, []
   end
@@ -144,13 +152,13 @@ defmodule Parsable do
     end
   end
 
-  def parse(source, {:transform, inner, transformation}=spec) do
+  def parse(source, {:match, inner, transformation}=spec) do
     { inner_result, rest } = parse source, inner
     try do
       { transformation.( inner_result ), rest }
     rescue
       e in [MatchError, FunctionClauseError] ->
-        raise ParseError, at: source, spec: spec, reason: "Cannot destructure match for transformation."
+        raise ParseError, at: source, spec: spec, reason: "Cannot destructure match."
     end
   end
 

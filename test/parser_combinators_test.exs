@@ -6,14 +6,14 @@ defmodule ParserCombinatorsTest do
 
 
   defp assignment do
-    transform [ identifier, "=", choice(identifier, tuple), optional(choice(";", "\n")) ],
-              [ left_hand,  _,    right_hand,                _] do
+    match [ identifier, "=", choice(identifier, tuple), optional(choice(";", "\n")) ],
+          [ left_hand,  _,    right_hand,                _] do
       {:assignment, left_hand, right_hand}
     end
   end
 
   defp identifier do
-    transform ~r/:(\w+):/, [x] do
+    match ~r/:(\w+):/, [x] do
       {:identifier, x}
     end
   end
@@ -23,7 +23,7 @@ defmodule ParserCombinatorsTest do
   end
 
   defp tuple do
-    transform raw_tuple, [x,y] do
+    match raw_tuple, [x,y] do
       {a, ""} = Integer.parse x
       {b, ""} = Integer.parse y
       {:tuple, a, b}
@@ -99,6 +99,10 @@ defmodule ParserCombinatorsTest do
   end
 
   test "split up files" do
+    flunk "TODO"
+  end
+
+  test "lazy" do
     flunk "TODO"
   end
 
