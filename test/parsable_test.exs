@@ -1,4 +1,4 @@
-defmodule ParserCombinatorsTest do
+defmodule ParsableTest do
   use ExUnit.Case
 
   import Parsable, only: [parse!: 2]
