@@ -98,10 +98,6 @@ defmodule ParserCombinatorsTest do
     catch_error parse!("<1,2>", prevent(tuple,~r/(.+)/))
   end
 
-  test "more explicit failure modeling" do
-    flunk "TODO"
-  end
-
   test "split up files" do
     flunk "TODO"
   end

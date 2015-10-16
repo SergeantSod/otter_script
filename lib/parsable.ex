@@ -47,20 +47,56 @@ defmodule Parsable do
 
   end
 
+  defmodule ParseError do
+    defexception at: "", spec: nil, reason: nil
+
+    def message(parse_error) do
+      ~s"""
+      No parse:#{parse_error.reason}
+      At:
+      #{at_message parse_error}
+      """
+    end
+
+    defp at_message(parse_error) do
+      parse_error.at
+        |> String.split("\n")
+        |> ellipsize_lines
+        |> indent_lines
+        |> Enum.join("\n")
+    end
+
+    defp indent_lines(lines) do
+      Enum.map lines, fn l ->
+        "   #{l}"
+      end
+    end
+
+    defp ellipsize_lines(lines) do
+      if Enum.count(lines) > 4 do
+        Enum.take(lines, 3) ++ ["..."]
+      else
+        lines
+      end
+    end
+
+  end
+
   defmacrop try_parse(do: do_clause, else: else_clause) do
     quote do
       try do
         unquote(do_clause)
       rescue
-        MatchError -> unquote(else_clause)
-        FunctionClauseError -> unquote(else_clause)
+        ParseError -> unquote(else_clause)
       end
     end
   end
 
   def parse!(source, spec) do
-    {result, ""} = parse source, spec
-    result
+    case parse(source, spec) do
+      {result, ""} -> result
+      {_,    rest} -> raise ParseError, at: rest, spec: spec, reason: "Superfluous input."
+    end
   end
 
   def parse(source, {:many, of}) do
@@ -68,7 +104,7 @@ defmodule Parsable do
   end
 
   def parse(source, literal) when is_binary(literal) do
-    { literal, strip_prefix!(literal, source) }
+    { literal, strip_prefix!(literal, source, literal) }
   end
 
   def parse(source, []), do: {[], source}
@@ -79,6 +115,9 @@ defmodule Parsable do
     { [ head_result | other_results ], real_rest }
   end
 
+  def parse(source, {:choice, []}=spec) do
+    raise ParseError, at: source, spec: spec, reason: "No more choices."
+  end
 
   def parse(source, {:choice, [first | rest]}) do
     try_parse do
@@ -88,9 +127,13 @@ defmodule Parsable do
     end
   end
 
-  def parse(source, %Regex{}=pattern) do
-    [first_match | match_groups] = Regex.run pattern, source
-    { match_groups, strip_prefix!(first_match, source) }
+  def parse(source, %Regex{}=spec) do
+    case Regex.run(spec, source) do
+      [first_match | match_groups] ->
+        { match_groups, strip_prefix!(first_match, source, spec) }
+      _ ->
+        raise ParseError, at: source, spec: spec, reason: "Unmatchable regular pattern."
+    end
   end
 
   def parse(source, {:optional, of}) do
@@ -101,25 +144,36 @@ defmodule Parsable do
     end
   end
 
-  def parse(source, {:transform, inner, transformation}) do
+  def parse(source, {:transform, inner, transformation}=spec) do
     { inner_result, rest } = parse source, inner
-    { transformation.( inner_result ), rest }
+    try do
+      { transformation.( inner_result ), rest }
+    rescue
+      e in [MatchError, FunctionClauseError] ->
+        raise ParseError, at: source, spec: spec, reason: "Cannot destructure match for transformation."
+    end
   end
 
   def parse(source, {:check, condition, actual}) do
-    {_, _} = parse(source, condition)
+    parse(source, condition)
     parse(source, actual)
   end
 
-  def parse(source, {:prevent, condition, actual}) do
-    #TODO This is just horrible, horrible stuff, which will hopefull go away in a second.
-    x = try_parse do
-      parse source, condition
+  def parse(source, {:prevent, condition, actual}=spec) do
+    result = try_parse do
+      {:prevent, parse(source, condition)}
     else
-      :failed
+      {:pass , parse(source, actual)}
     end
-    :failed = x
-    parse(source, actual)
+    case result do
+      {:prevent, _} ->
+        raise ParseError, at: source, spec: spec, reason: "Negative lookeahead failed."
+      {:pass, r } -> r
+    end
+  end
+
+  def parse(source, other_spec) do
+    raise ParseError, at: source, spec: other_spec, reason: "Unhandled parse spec."
   end
 
   defp parse_into(source, target, result) do
@@ -131,9 +185,11 @@ defmodule Parsable do
     end
   end
 
-  defp strip_prefix!(prefix, source) do
-    { ^prefix, rest } = String.split_at source, String.length(prefix)
-    rest
+  defp strip_prefix!(prefix, source, spec) do
+    case String.split_at(source, String.length(prefix)) do
+      { ^prefix, rest } -> rest
+      _ -> raise ParseError, at: source, spec: spec, reason: "Unmatchable prefix."
+    end
   end
 
 end
