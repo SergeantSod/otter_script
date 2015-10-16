@@ -30,6 +30,19 @@ defmodule ParsableTest do
     end
   end
 
+  defp tuple_list do
+    match [tuple, optional([",", lazy(tuple_list)])],
+          [head,  maybe_tail                       ]
+          do
+      case maybe_tail do
+        nil ->
+          [head]
+        [_, tail] ->
+          [head | tail]
+      end
+    end
+  end
+
   test "accepts a string" do
     assert "foo" == parse! "foo", "foo"
   end
@@ -98,12 +111,9 @@ defmodule ParsableTest do
     catch_error parse!("<1,2>", prevent(tuple,~r/(.+)/))
   end
 
-  test "split up files" do
-    flunk "TODO"
-  end
-
-  test "lazy" do
-    flunk "TODO"
+  test "recursion via lazy" do
+    assert [{:tuple, 12,13}] == parse!("<12,13>", tuple_list)
+    assert [{:tuple, 12,13}, {:tuple, 1, 2}] == parse!("<12,13>,<1,2>", tuple_list)
   end
 
   test "accepts a repetition" do
