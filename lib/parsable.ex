@@ -14,6 +14,14 @@ defmodule Parsable do
       choice [a, b, c]
     end
 
+    def choice(a, b, c, d) do
+      choice [a, b, c, d]
+    end
+
+    def choice(a, b, c, d, e) do
+      choice [a, b, c, d, e]
+    end
+
     def choice(of) when is_list(of) do
       {:choice, of}
     end
