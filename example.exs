@@ -8,12 +8,16 @@ defmodule TermParser do
   end
 
   def line do
-    match [ optional(whitespace), statement, optional(whitespace), "\n" ],
-          [ _,                    result,    _,                    _    ], do: result
+    match [ space, statement, space, "\n" ],
+          [ _,     result,    _,     _    ], do: result
   end
 
-  def whitespace do
-    match ~r/( +)/, _, do: :whitespace
+  def space do
+    optional(hardspace)
+  end
+
+  def hardspace do
+    match ~r/( +)/, _, do: :hardspace
   end
 
   def statement do
@@ -21,8 +25,8 @@ defmodule TermParser do
   end
 
   def assignment do
-    match [identifier, optional(whitespace), "=", optional(whitespace), expression],
-          [lhs       , _                   , _  , _,                    rhs       ] do
+    match [identifier, space, "=", space, expression],
+          [lhs,        _,     _,   _,     rhs       ] do
 
       {:assignment, lhs, rhs}
     end
@@ -48,16 +52,9 @@ defmodule TermParser do
   end
 
   def invocation do
-    match [identifier,    "(", optional(whitespace), optional(expression_list) , optional(whitespace),")"],
-          [function_name,  _,  _,                    a                         , _,                    _ ] do
-
-      arguments = case a do
-        nil ->
-          []
-        _   ->
-          a
-      end
-      {:invocation, function_name, arguments}
+    match [identifier,    "(", space, optional(expression_list), space, ")"],
+          [function_name,  _,  _,     arguments,                 _,     _  ] do
+      {:invocation, function_name, (arguments || [])}
     end
   end
 
@@ -67,8 +64,8 @@ defmodule TermParser do
   end
 
   def expression_tail do
-    match [optional(whitespace), ",", optional(whitespace), lazy(expression)],
-          [_,                     _,  _,                    result          ], do: result
+    match [space, ",", space, lazy(expression)],
+          [_,     _,   _,     result          ], do: result
   end
 end
 
