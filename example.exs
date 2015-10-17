@@ -1,15 +1,97 @@
 #!/bin/env elixir
 
-defmodule TermParser do
+defmodule Parsers.InterspersedList do
+  import Parsable.Factory
+
+  def interspersed(content, separator) do
+    match optional(interspersed!(content, separator)), result, do: (result || [])
+  end
+
+  def interspersed!(content, separator) do
+    match [ content, many(tail_for(content, separator)) ],
+          [ head,    tail                               ], do: [head | tail]
+  end
+
+  defp tail_for(content, separator) do
+    match [ separator, content ],
+          [ _,         result  ], do: result
+  end
+
+end
+
+defmodule Parsers.Literals do
+  import Parsable.Factory
+
+  def integer do
+    match ~r/(\d+)/, [digits] do
+      {result, ""} = Integer.parse digits
+      result
+    end
+  end
+
+  def string do
+    match ["\"", many(chunk), "\""],
+          [_,    contents,    _   ] do
+
+      Enum.join contents
+    end
+  end
+
+  defp chunk do
+    choice(escapes, normal_chunk)
+  end
+
+  defp normal_chunk do
+    match ~r/([^"\\]+)/, [content], do: content
+  end
+
+  defp escapes do
+    choice(
+      escape("\\\\", "\\"),
+      escape("\\\"", "\""),
+      escape("\\n",  "\n")
+    )
+  end
+
+  #TODO: This is generally useful and should be pulled into Parsable.Factory.
+  #      the general pattern is: parse something, but represent it differently in the output.
+  #      this is a weaker version of match, since it just puts in a constant, but still convenient.
+  defp escape(source, target) do
+    match source, _, do: target
+  end
+
+end
+
+defmodule Parsers.Script do
   import Parsable.Factory
 
   def script do
     many line
   end
 
+  def block(from, content, to) do
+    block_start = [space, from, space, "\n"]
+    block_end   = [space, to, space, "\n"]
+    match [ block_start, many(prevent(block_end, content)), block_end ],
+          [ _,           contents,                          _         ], do: contents
+  end
+
   def line do
-    match [ space, statement, space, "\n" ],
-          [ _,     result,    _,     _    ], do: result
+    choice(expression_line, empty_line, comment_line)
+  end
+
+  def empty_line do
+    match [space, "\n"], _, do: {:empty}
+  end
+
+  def comment_line do
+    match [space, "#", ~r/(.*)/  ],
+          [_,     _,   [content] ], do: {:comment, content}
+  end
+
+  def expression_line do
+    match [ space, expression, space, "\n" ],
+          [ _,     result,     _,     _    ], do: result
   end
 
   def space do
@@ -20,13 +102,13 @@ defmodule TermParser do
     match ~r/( +)/, _, do: :hardspace
   end
 
-  def statement do
-    choice(assignment, expression)
+  def expression do
+    lazy choice(assignment, invocation, literal, reference)
   end
 
   def assignment do
-    match [identifier, space, "=", space, expression],
-          [lhs,        _,     _,   _,     rhs       ] do
+    match [ identifier, space, "=", space, expression ],
+          [ lhs,        _,     _,   _,     rhs        ] do
 
       {:assignment, lhs, rhs}
     end
@@ -41,32 +123,25 @@ defmodule TermParser do
   end
 
   def literal do
-    match ~r/(\d+)/, [digits] do
-      {result, ""} = Integer.parse digits
-      result
-    end
-  end
-
-  def expression do
-    choice(literal, invocation, reference)
+    import Parsers.Literals
+    match choice(integer, string), value, do: {:literal, value}
   end
 
   def invocation do
-    match [identifier,    "(", space, optional(expression_list), space, ")"],
-          [function_name,  _,  _,     arguments,                 _,     _  ] do
-      {:invocation, function_name, (arguments || [])}
+
+    inner_list = interspersed(expression)
+
+    match [identifier,    "(", space, inner_list, space, ")"],
+          [function_name,  _,  _,     arguments,  _,     _  ] do
+
+      {:invocation, function_name, arguments }
     end
   end
 
-  def expression_list do
-    match [lazy(expression), many(expression_tail)],
-          [head,             tail                 ], do: [head | tail]
+  defp interspersed(content) do
+    Parsers.InterspersedList.interspersed content, [space, ",", space]
   end
 
-  def expression_tail do
-    match [space, ",", space, lazy(expression)],
-          [_,     _,   _,     result          ], do: result
-  end
 end
 
 defmodule CoreFunctions do
@@ -85,48 +160,71 @@ end
 
 defmodule Interpreter do
 
-  def interpret(script, core_functions, top_level_bindings \\ %{})
-
-  def interpret(script, core_functions, top_level_bindings) when is_list(script) do
-    Enum.reduce script, top_level_bindings, fn(statement, bindings) ->
-      interpret(statement, core_functions, bindings)
-    end
+  defmodule State do
+    @derive [Access]
+    defstruct bindings: %{}, stack: [], core: nil
   end
 
-  def interpret({:assignment, variable, expression}, core_functions, bindings) do
-    Map.put bindings, variable, evaluate(expression, core_functions, bindings)
+  def evaluate([], state) do
+    {nil, state}
   end
 
-  def interpret(other, core_functions, bindings) do
-    evaluate(other, core_functions, bindings)
-    bindings
+  def evaluate([expression], state) do
+    evaluate expression, state
   end
 
-  def evaluate({:reference, variable_name}, _, bindings) do
-    if Map.has_key? bindings, variable_name do
-      Map.get bindings, variable_name
+  def evaluate([expression | rest], state) do
+    {_, new_state} = evaluate expression, state
+    evaluate rest, new_state
+  end
+
+  def evaluate({:assignment, variable, expression}, state) do
+    {result, new_state} = evaluate(expression, state)
+    new_state = put_in new_state, [:bindings, variable], result
+    {result, new_state}
+  end
+
+  def evaluate({:reference, variable_name}, state) do
+    if Map.has_key? state.bindings, variable_name do
+      {state.bindings[variable_name], state}
     else
       raise "Variable #{variable_name} is undefined."
     end
   end
 
-  def evaluate({:invocation, function_name, arguments}, core_functions, bindings) do
-    evaluated_arguments = Enum.map arguments, fn (a) ->
-      evaluate(a, core_functions, bindings)
-    end
-    apply(core_functions, String.to_atom(function_name), evaluated_arguments)
+  def evaluate({:invocation, function_name, arguments}, state) do
+    {evaluated_arguments, new_state} = evaluate_sequence arguments, state
+     result = do_invoke(new_state, function_name, evaluated_arguments)
+    {result, new_state}
   end
 
-  def evaluate(literal, _, _) when is_number(literal), do: literal
+  def evaluate({:literal, value}, state), do: {value, state}
+  def evaluate({:comment, _},     state), do: {nil,   state}
+  def evaluate({:empty},          state), do: {nil,   state}
+
+  defp do_invoke(state, function_name, arguments) do
+    apply(state.core, String.to_atom(function_name), arguments)
+  end
+
+  defp evaluate_sequence([], state) do
+    {[], state}
+  end
+
+  defp evaluate_sequence([e | rest], state) do
+    { result,                    new_state } = evaluate e, state
+    { other_results,            last_state } = evaluate_sequence rest, new_state
+    { [result | other_results], last_state }
+  end
+
 end
 
 defmodule Runner do
   def run do
     case System.argv do
       [file_name] ->
-        run file_name
-      ["--debug", file_name] ->
-        debug file_name
+        parse(file_name) |> run
+      ["--parse", file_name] ->
+        parse(file_name) |> print
       _ ->
         IO.puts "Give the filename as the one and only argument."
         System.halt(1)
@@ -136,15 +234,15 @@ defmodule Runner do
   def parse(file_name) do
     file_name
       |> File.read!
-      |> Parsable.parse!(TermParser.script)
+      |> Parsable.parse!(Parsers.Script.script)
   end
 
-  def debug(file_name) do
-    file_name |> parse |> IO.inspect
+  def print(script) do
+    IO.inspect script
   end
 
-  def run(file_name) do
-    file_name |> parse |> Interpreter.interpret(CoreFunctions)
+  def run(script) do
+    Interpreter.evaluate(script, %Interpreter.State{core: CoreFunctions})
   end
 
 end
