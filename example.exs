@@ -37,6 +37,13 @@ defmodule Parsers.Literals do
     end
   end
 
+  def boolean do
+    choice(
+      escape("true",  true),
+      escape("false", false)
+    )
+  end
+
   defp chunk do
     choice(escapes, normal_chunk)
   end
@@ -138,7 +145,7 @@ defmodule Parsers.Script do
 
   def literal do
     import Parsers.Literals
-    match choice(integer, string), value, do: {:literal, value}
+    match choice(integer, string, boolean), value, do: {:literal, value}
   end
 
   def invocation do
