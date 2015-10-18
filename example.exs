@@ -81,6 +81,8 @@ defmodule Parsers.Script do
   end
 
   def empty_line do
+    # TODO nil is also output of optional =>
+    # should be possible to inline the *_line stuff so we have EOL in less places.
     match [space, "\n"], _, do: nil
   end
 
@@ -172,6 +174,10 @@ defmodule Parsers.Script do
   end
 
   def else_clause do
+    #TODO The space is a soft space, which sucks, since we want to require the space.
+    # This is wrong pretty much everywhere in here. Instead: Extract a generic higher-level combinator
+    # on top of match + Enum.intersperse, Enum.take_every
+    # curry hardspace into this to get a specific helper.
     match [ space, "else", space, expression ],
           [ _,     _,      _,     result     ], do: result
   end
