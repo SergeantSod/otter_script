@@ -116,6 +116,10 @@ defmodule ParsableTest do
     assert [{:tuple, 12,13}, {:tuple, 1, 2}] == parse!("<12,13>,<1,2>", tuple_list)
   end
 
+  test "should not use exceptions for control flow internally" do
+    flunk "TODO"
+  end
+
   test "accepts a repetition" do
     raw_expression = ~S"""
     :bar:=<12,13>
