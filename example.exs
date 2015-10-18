@@ -81,7 +81,7 @@ defmodule Parsers.Script do
   end
 
   def empty_line do
-    match [space, "\n"], _, do: {:empty}
+    match [space, "\n"], _, do: nil
   end
 
   def comment_line do
@@ -164,13 +164,16 @@ defmodule Parsers.Script do
   end
 
   def if_expression do
-    else_clause = match [ space, "else", expression ],
-                        [ _,     _,      result     ], do: result
     match ["if", space, expression, space, "then", space, expression, optional(else_clause)],
           [_,    _,     condition,  _,     _,      _,     if_case,    else_case            ]
         do
       { :if, condition, if_case, else_case }
     end
+  end
+
+  def else_clause do
+    match [ space, "else", space, expression ],
+          [ _,     _,      _,     result     ], do: result
   end
 
   def block do
@@ -256,7 +259,7 @@ defmodule Interpreter do
 
   def evaluate({:literal, value}, state), do: {value, state}
   def evaluate({:comment, _},     state), do: {nil,   state}
-  def evaluate({:empty},          state), do: {nil,   state}
+  def evaluate( nil,              state), do: {nil,   state}
 
   defp do_invoke(state, function_name, arguments) do
     apply(state.core, String.to_atom(function_name), arguments)
