@@ -69,13 +69,6 @@ defmodule Parsers.Script do
     many line
   end
 
-  def block(from, content, to) do
-    block_start = [space, from, space, "\n"]
-    block_end   = [space, to, space, "\n"]
-    match [ block_start, many(prevent(block_end, content)), block_end ],
-          [ _,           contents,                          _         ], do: contents
-  end
-
   def line do
     choice(expression_line, empty_line, comment_line)
   end
@@ -85,8 +78,8 @@ defmodule Parsers.Script do
   end
 
   def comment_line do
-    match [space, "#", ~r/(.*)/  ],
-          [_,     _,   [content] ], do: {:comment, content}
+    match [space, "#", ~r/(.*)/,  "\n"],
+          [_,     _,   [content], _   ], do: {:comment, content}
   end
 
   def expression_line do
@@ -103,12 +96,33 @@ defmodule Parsers.Script do
   end
 
   def expression do
-    lazy choice(assignment, invocation, literal, reference)
+    lazy choice(infix_expression, bare_expression)
+  end
+
+  def bare_expression do
+    choice [
+      literal,
+      if_expression,
+      function,
+      assignment,
+      invocation,
+      recursion,
+      block,
+      reference
+    ]
+  end
+
+  def function do
+    match [ bracket_list(identifier), space, "=>", space, expression ],
+          [ arguments,                _,     _,    _,     body       ] do
+
+      {:function, arguments, body}
+    end
   end
 
   def assignment do
-    match [ identifier, space, "=", space, expression ],
-          [ lhs,        _,     _,   _,     rhs        ] do
+    match [ identifier, space, choice("=", ":"), space, expression ],
+          [ lhs,        _,     _,                _,     rhs        ] do
 
       {:assignment, lhs, rhs}
     end
@@ -128,14 +142,49 @@ defmodule Parsers.Script do
   end
 
   def invocation do
+    match [identifier,    bracket_list(expression) ],
+          [function_name, arguments                ], do: {:invocation, function_name, arguments }
+  end
 
-    inner_list = interspersed(expression)
+  # def brackets do
+  #   match [ "(", space, expression, space, ")"],
+  #         [ _,   _,     result,     _,     _  ], do: result
+  # end
 
-    match [identifier,    "(", space, inner_list, space, ")"],
-          [function_name,  _,  _,     arguments,  _,     _  ] do
+  def recursion do
+    match ["~", space, bracket_list(expression)],
+          [_  , _,     result                  ], do: {:recursion, result}
+  end
 
-      {:invocation, function_name, arguments }
+  def if_expression do
+    else_clause = match [ space, "else", expression ],
+                        [ _,     _,      result     ], do: result
+    match ["if", space, expression, space, "then", space, expression, optional(else_clause)],
+          [_,    _,     condition,  _,     _,      _,     if_case,    else_case            ]
+        do
+      { :if, condition, if_case, else_case }
     end
+  end
+
+  def block do
+    block_start = [space, "do", space, "\n"]
+    block_end   = [space, "end", space]
+    match [ block_start, many(prevent(block_end, expression_line)), block_end ],
+          [ _,           contents,                                  _         ], do: contents
+  end
+
+  def infix_expression do
+    infix_expression choice ~w(- + * <= >= < > && || /)
+  end
+
+  defp infix_expression(operator) do
+    match [ bare_expression, space, operator, space, bare_expression],
+          [ left,            _,     op,       _,     right     ], do: {:infix, op, left, right}
+  end
+
+  defp bracket_list(content) do
+    match [ "(", space, interspersed(content), space, ")" ],
+          [ _,   _,     inner,                 _,     _,  ], do: inner
   end
 
   defp interspersed(content) do
