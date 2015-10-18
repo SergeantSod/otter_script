@@ -60,22 +60,20 @@ defmodule Parsable do
   end
 
   defmodule ParseError do
-    defexception at: "", spec: nil, reason: nil
+    defexception at: ""
 
     def message(parse_error) do
       ~s"""
-      No parse:#{parse_error.reason}
-      At:
-      #{at_message parse_error}
+      Failed to parse at or near:
+      #{at_message parse_error.at}
       """
     end
 
-    defp at_message(parse_error) do
-      parse_error.at
-        |> String.split("\n")
-        |> ellipsize_lines
-        |> indent_lines
-        |> Enum.join("\n")
+    defp at_message(at) do
+      at |> String.split("\n")
+         |> ellipsize_lines
+         |> indent_lines
+         |> Enum.join("\n")
     end
 
     defp indent_lines(lines) do
@@ -107,7 +105,8 @@ defmodule Parsable do
   def parse!(source, spec) do
     case parse(source, spec) do
       {result, ""} -> result
-      {_,    rest} -> raise ParseError, at: rest, spec: spec, reason: "Superfluous input."
+      {_,    rest} ->
+        raise ParseError, at: rest
     end
   end
 
@@ -120,7 +119,7 @@ defmodule Parsable do
   end
 
   def parse(source, literal) when is_binary(literal) do
-    { literal, strip_prefix!(literal, source, literal) }
+    { literal, strip_prefix!(literal, source) }
   end
 
   def parse(source, []), do: {[], source}
@@ -131,8 +130,8 @@ defmodule Parsable do
     { [ head_result | other_results ], real_rest }
   end
 
-  def parse(source, {:choice, []}=spec) do
-    raise ParseError, at: source, spec: spec, reason: "No more choices."
+  def parse(source, {:choice, []}) do
+    raise ParseError, at: source
   end
 
   def parse(source, {:choice, [first | rest]}) do
@@ -146,9 +145,9 @@ defmodule Parsable do
   def parse(source, %Regex{}=spec) do
     case Regex.run(spec, source) do
       [first_match | match_groups] ->
-        { match_groups, strip_prefix!(first_match, source, spec) }
+        { match_groups, strip_prefix!(first_match, source) }
       _ ->
-        raise ParseError, at: source, spec: spec, reason: "Unmatchable regular pattern."
+        raise ParseError, at: source
     end
   end
 
@@ -160,13 +159,14 @@ defmodule Parsable do
     end
   end
 
-  def parse(source, {:match, inner, transformation}=spec) do
+  def parse(source, {:match, inner, transformation}) do
     { inner_result, rest } = parse source, inner
     try do
       { transformation.( inner_result ), rest }
     rescue
-      e in [MatchError, FunctionClauseError] ->
-        raise ParseError, at: source, spec: spec, reason: "Cannot destructure match."
+      #TODO Does cathing multiple exceptions actually work like this in Elixir?
+      _e in [MatchError, FunctionClauseError] ->
+        raise ParseError, at: source
     end
   end
 
@@ -175,7 +175,7 @@ defmodule Parsable do
     parse(source, actual)
   end
 
-  def parse(source, {:prevent, condition, actual}=spec) do
+  def parse(source, {:prevent, condition, actual}) do
     result = try_parse do
       {:prevent, parse(source, condition)}
     else
@@ -183,13 +183,13 @@ defmodule Parsable do
     end
     case result do
       {:prevent, _} ->
-        raise ParseError, at: source, spec: spec, reason: "Negative lookeahead failed."
+        raise ParseError, at: source
       {:pass, r } -> r
     end
   end
 
-  def parse(source, other_spec) do
-    raise ParseError, at: source, spec: other_spec, reason: "Unhandled parse spec."
+  def parse(source, _) do
+    raise ParseError, at: source
   end
 
   defp parse_into(source, target, result) do
@@ -201,10 +201,10 @@ defmodule Parsable do
     end
   end
 
-  defp strip_prefix!(prefix, source, spec) do
+  defp strip_prefix!(prefix, source) do
     case String.split_at(source, String.length(prefix)) do
       { ^prefix, rest } -> rest
-      _ -> raise ParseError, at: source, spec: spec, reason: "Unmatchable prefix."
+      _ -> raise ParseError, at: source
     end
   end
 
