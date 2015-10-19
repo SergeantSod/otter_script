@@ -1,7 +1,15 @@
 #!/bin/env elixir
 
-defmodule Parsers.InterspersedList do
+#TODO: This is generally useful and should be pulled into Parsable.
+#TODO Naming.
+#TODO API dedign? Keyword arguments for readability? Same applies to Factory
+defmodule Parsable.Helpers do
   import Parsable.Factory
+
+  #TODO Naming.
+  def escape(source, target) do
+    match source, _, do: target
+  end
 
   def interspersed(content, separator) do
     match optional(interspersed!(content, separator)), result, do: (result || [])
@@ -12,6 +20,12 @@ defmodule Parsers.InterspersedList do
           [ head,    tail                               ], do: [head | tail]
   end
 
+  def separated(sequence, separator) do
+    match Enum.intersperse(sequence, separator), result do
+      Enum.take_every result, 2
+    end
+  end
+
   defp tail_for(content, separator) do
     match [ separator, content ],
           [ _,         result  ], do: result
@@ -19,8 +33,9 @@ defmodule Parsers.InterspersedList do
 
 end
 
-defmodule Parsers.Literals do
+defmodule DerpyScript.Parser.Literals do
   import Parsable.Factory
+  import Parsable.Helpers
 
   def integer do
     match ~r/(\d+)/, [digits] do
@@ -29,19 +44,19 @@ defmodule Parsers.Literals do
     end
   end
 
+  def boolean do
+    choice(
+      escape("true",  true),
+      escape("false", false)
+    )
+  end
+
   def string do
     match ["\"", many(chunk), "\""],
           [_,    contents,    _   ] do
 
       Enum.join contents
     end
-  end
-
-  def boolean do
-    choice(
-      escape("true",  true),
-      escape("false", false)
-    )
   end
 
   defp chunk do
@@ -60,17 +75,12 @@ defmodule Parsers.Literals do
     )
   end
 
-  #TODO: This is generally useful and should be pulled into Parsable.Factory.
-  #      the general pattern is: parse something, but represent it differently in the output.
-  #      this is a weaker version of match, since it just puts in a constant, but still convenient.
-  defp escape(source, target) do
-    match source, _, do: target
-  end
-
 end
 
-defmodule Parsers.Script do
+defmodule DerpyScript.Parser do
   import Parsable.Factory
+  import Parsable.Helpers
+  alias DerpyScript.Parser.Literals
 
   def script do
     many line
@@ -146,8 +156,9 @@ defmodule Parsers.Script do
   end
 
   def literal do
-    import Parsers.Literals
-    match choice(integer, string, boolean), value, do: {:literal, value}
+    match choice(Literals.integer, Literals.string, Literals.boolean), value do
+      {:literal, value}
+    end
   end
 
   def invocation do
@@ -155,31 +166,22 @@ defmodule Parsers.Script do
           [function_name, arguments                ], do: {:invocation, function_name, arguments }
   end
 
-  # def brackets do
-  #   match [ "(", space, expression, space, ")"],
-  #         [ _,   _,     result,     _,     _  ], do: result
-  # end
-
   def recursion do
     match ["~", space, bracket_list(expression)],
           [_  , _,     result                  ], do: {:recursion, result}
   end
 
   def if_expression do
-    match ["if", space, expression, space, "then", space, expression, optional(else_clause)],
-          [_,    _,     condition,  _,     _,      _,     if_case,    else_case            ]
-        do
+    match [words(["if", expression, "then", expression]), optional(else_clause)],
+          [      [_,    condition,  _,      if_case,  ], else_case            ] do
       { :if, condition, if_case, else_case }
     end
   end
 
-  def else_clause do
-    #TODO The space is a soft space, which sucks, since we want to require the space.
-    # This is wrong pretty much everywhere in here. Instead: Extract a generic higher-level combinator
-    # on top of match + Enum.intersperse, Enum.take_every
-    # curry hardspace into this to get a specific helper.
-    match [ space, "else", space, expression ],
-          [ _,     _,      _,     result     ], do: result
+  defp else_clause do
+    # Dirty little trick: Add leading empty string to force leading hardspace.
+    match words(["", "else", expression]),
+                [_,  _,      result    ], do: result
   end
 
   def block do
@@ -204,12 +206,16 @@ defmodule Parsers.Script do
   end
 
   defp interspersed(content) do
-    Parsers.InterspersedList.interspersed content, [space, ",", space]
+    interspersed content, [space, ",", space]
+  end
+
+  defp words(of) do
+    separated(of, hardspace)
   end
 
 end
 
-defmodule CoreFunctions do
+defmodule DerpyScript.CoreFunctions do
   def print(value) do
     IO.puts value
   end
@@ -223,7 +229,7 @@ defmodule CoreFunctions do
   end
 end
 
-defmodule Interpreter do
+defmodule DerpyScript.Interpreter do
 
   defmodule State do
     @derive [Access]
@@ -283,9 +289,13 @@ defmodule Interpreter do
 
 end
 
-defmodule Runner do
-  def run do
-    case System.argv do
+defmodule DerpyScript.Runner do
+  alias DerpyScript.Interpreter
+  alias DerpyScript.CoreFunctions
+  alias DerpyScript.Parser
+
+  def main(arguments) do
+    case arguments do
       [file_name] ->
         parse(file_name) |> run
       ["--parse", file_name] ->
@@ -296,20 +306,18 @@ defmodule Runner do
     end
   end
 
-  def parse(file_name) do
+  defp parse(file_name) do
     file_name
       |> File.read!
-      |> Parsable.parse!(Parsers.Script.script)
+      |> Parsable.parse!(Parser.script)
   end
 
-  def print(script) do
+  defp print(script) do
     IO.inspect script
   end
 
-  def run(script) do
+  defp run(script) do
     Interpreter.evaluate(script, %Interpreter.State{core: CoreFunctions})
   end
 
 end
-
-Runner.run

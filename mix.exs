@@ -5,7 +5,8 @@ defmodule ParserCombinators.Mixfile do
     [app: :parser_combinators,
      version: "0.0.1",
      elixir: "~> 1.0",
-     deps: deps]
+     deps: deps,
+     escript: escript]
   end
 
   # Configuration for the OTP application
@@ -26,5 +27,11 @@ defmodule ParserCombinators.Mixfile do
   # Type `mix help deps` for more examples and options
   defp deps do
     []
+  end
+
+  defp escript do
+    [
+      main_module: DerpyScript.Runner
+    ]
   end
 end
