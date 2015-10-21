@@ -107,11 +107,11 @@ defmodule DerpyScript.Parser do
   end
 
   def space do
-    optional(hardspace)
+    match ~r/( *)/, _, do: :space
   end
 
   def hardspace do
-    match ~r/( +)/, _, do: :hardspace
+    match ~r/( +)/, _, do: :space
   end
 
   def expression do
@@ -132,16 +132,16 @@ defmodule DerpyScript.Parser do
   end
 
   def function do
-    match [ bracket_list(identifier), space, "=>", space, expression ],
-          [ arguments,                _,     _,    _,     body       ] do
+    match softwords([ bracket_list(identifier), "=>", expression ]),
+                    [ arguments,                _,    body       ] do
 
       {:function, arguments, body}
     end
   end
 
   def assignment do
-    match [ identifier, space, choice("=", ":"), space, expression ],
-          [ lhs,        _,     _,                _,     rhs        ] do
+    match softwords([ identifier, choice("=", ":"), expression ]),
+                    [ lhs,        _,                rhs        ] do
 
       {:assignment, lhs, rhs}
     end
@@ -162,8 +162,11 @@ defmodule DerpyScript.Parser do
   end
 
   def invocation do
-    match [identifier,    bracket_list(expression) ],
-          [function_name, arguments                ], do: {:invocation, function_name, arguments }
+    match softwords([identifier,    bracket_list(expression) ]),
+                    [function_name, arguments                ] do
+
+      {:invocation, function_name, arguments }
+    end
   end
 
   def recursion do
@@ -187,7 +190,7 @@ defmodule DerpyScript.Parser do
   def block do
     block_start = [space, "do", space, "\n"]
     block_end   = [space, "end", space]
-    match [ block_start, many(prevent(block_end, expression_line)), block_end ],
+    match [ block_start, many(prevent(block_end, line)), block_end ],
           [ _,           contents,                                  _         ], do: contents
   end
 
@@ -196,13 +199,13 @@ defmodule DerpyScript.Parser do
   end
 
   defp infix_expression(operator) do
-    match [ bare_expression, space, operator, space, bare_expression],
-          [ left,            _,     op,       _,     right     ], do: {:infix, op, left, right}
+    match softwords([ bare_expression, operator, expression]),
+                    [ left,            op,       right     ], do: {:infix, op, left, right}
   end
 
   defp bracket_list(content) do
-    match [ "(", space, interspersed(content), space, ")" ],
-          [ _,   _,     inner,                 _,     _,  ], do: inner
+    match softwords([ "(", interspersed(content), ")" ]),
+                    [ _,   inner,                 _,  ], do: inner
   end
 
   defp interspersed(content) do
@@ -211,6 +214,10 @@ defmodule DerpyScript.Parser do
 
   defp words(of) do
     separated(of, hardspace)
+  end
+
+  defp softwords(of) do
+    separated(of, space)
   end
 
 end
