@@ -69,12 +69,17 @@ defmodule DerpyScript.ParserTest do
   end
 
   test "parses a block" do
-    some_block = "do\na=b\n1234\ntrue\nend"
-    assert_parse block, some_block, [
-      {:assignment, "a", {:reference, "b"}},
-      {:literal, 1234},
-      {:literal, true}
-    ]
+    some_block = "do
+                    a=b
+                    1234
+                    true
+                  end"
+    assert_parse block, 
+      some_block, [
+        {:assignment, "a", {:reference, "b"}},
+        {:literal, 1234},
+        {:literal, true}
+      ]
   end
 
   test "parses an if expression without else" do
@@ -102,14 +107,80 @@ defmodule DerpyScript.ParserTest do
   end
 
   test "parses an if expression without else clause and a block" do
-    flunk "TODO"
+    assert_parse if_expression,
+      "if true then do
+        false
+      end", {
+        :if,
+        {:literal, true},
+        [ {:literal, false} ],
+        nil
+      }
   end
 
   test "parses an if expression with an else clause and a block" do
-    flunk "TODO"
+    assert_parse if_expression,
+      "if true then do
+        12
+       end else do
+        false
+       end",
+      {
+        :if,
+        {:literal, true},
+        [ {:literal, 12} ],
+        [ {:literal, false} ]
+      }
+  end
+
+  test "third case for if" do
+    assert_parse if_expression,
+      "if true then 12 else do
+          false
+      end", {
+        :if,
+        {:literal, true},
+        {:literal, 12},
+        [ {:literal, false} ]
+      }
   end
 
   test "parses a script" do
-    flunk "TODO"
+    some_script = ~S"""
+                    print("Welcome to DerpyScript.")
+
+                    # The fib function
+                    fib:(x)=> do
+                      if x <= 1 then 0 else do
+                        ~(x - 1) + ~(x - 2)
+                      end
+                    end
+
+                    print("Fib of 12:")
+                    print(fib(12))
+                    """
+    assert_parse script,
+      some_script,
+      [
+        {:invocation, "print", [literal: "Welcome to DerpyScript."]},
+        nil,
+        {:comment, " The fib function"},
+        {:assignment, "fib",
+          {:function, ["x"], [
+            {:if,
+              {:infix, "<=", {:reference, "x"}, {:literal, 1}},
+              {:literal, 0},
+              [
+                {:infix, "+",
+                  {:recursion, [{:infix, "-", {:reference, "x"}, {:literal, 1}}]},
+                  {:recursion, [{:infix, "-", {:reference, "x"}, {:literal, 2}}]}
+                }
+              ]
+            }
+          ]}},
+        nil,
+        {:invocation, "print", [literal: "Fib of 12:"]},
+        {:invocation, "print", [{:invocation, "fib", [literal: 12]}]}
+      ]
   end
 end

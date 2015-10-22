@@ -80,7 +80,6 @@ end
 defmodule DerpyScript.Parser do
   import Parsable.Factory
   import Parsable.Helpers
-  alias DerpyScript.Parser.Literals
 
   def script do
     many line
@@ -156,7 +155,8 @@ defmodule DerpyScript.Parser do
   end
 
   def literal do
-    match choice(Literals.integer, Literals.string, Literals.boolean), value do
+    import DerpyScript.Parser.Literals
+    match choice(integer, string, boolean), value do
       {:literal, value}
     end
   end
@@ -176,22 +176,22 @@ defmodule DerpyScript.Parser do
 
   def if_expression do
     match [words(["if", expression, "then", expression]), optional(else_clause)],
-          [      [_,    condition,  _,      if_case,  ], else_case            ] do
+          [      [_,    condition,  _,      if_case,  ],  else_case            ] do
       { :if, condition, if_case, else_case }
     end
   end
 
-  defp else_clause do
+  def else_clause do
     # Dirty little trick: Add leading empty string to force leading hardspace.
     match words(["", "else", expression]),
                 [_,  _,      result    ], do: result
   end
 
   def block do
-    block_start = [space, "do", space, "\n"]
-    block_end   = [space, "end", space]
+    block_start = ["do", space, "\n"]
+    block_end   = [space, "end"]
     match [ block_start, many(prevent(block_end, line)), block_end ],
-          [ _,           contents,                                  _         ], do: contents
+          [ _,           contents,                       _         ], do: contents
   end
 
   def infix_expression do
