@@ -1,8 +1,7 @@
-#!/bin/env elixir
 
 #TODO: This is generally useful and should be pulled into Parsable.
 #TODO Naming.
-#TODO API dedign? Keyword arguments for readability? Same applies to Factory
+#TODO API design? Keyword arguments for readability? Same applies to Factory
 defmodule Parsable.Helpers do
   import Parsable.Factory
 
@@ -218,113 +217,6 @@ defmodule DerpyScript.Parser do
 
   defp softwords(of) do
     separated(of, space)
-  end
-
-end
-
-defmodule DerpyScript.CoreFunctions do
-  def print(value) do
-    IO.puts value
-  end
-
-  def add(a,b) do
-    a + b
-  end
-
-  def mult(a, b) do
-    a * b
-  end
-end
-
-defmodule DerpyScript.Interpreter do
-
-  defmodule State do
-    @derive [Access]
-    defstruct bindings: %{}, stack: [], core: nil
-  end
-
-  def evaluate([], state) do
-    {nil, state}
-  end
-
-  def evaluate([expression], state) do
-    evaluate expression, state
-  end
-
-  def evaluate([expression | rest], state) do
-    {_, new_state} = evaluate expression, state
-    evaluate rest, new_state
-  end
-
-  def evaluate({:assignment, variable, expression}, state) do
-    {result, new_state} = evaluate(expression, state)
-    new_state = put_in new_state, [:bindings, variable], result
-    {result, new_state}
-  end
-
-  def evaluate({:reference, variable_name}, state) do
-    if Map.has_key? state.bindings, variable_name do
-      {state.bindings[variable_name], state}
-    else
-      raise "Variable #{variable_name} is undefined."
-    end
-  end
-
-  def evaluate({:invocation, function_name, arguments}, state) do
-    {evaluated_arguments, new_state} = evaluate_sequence arguments, state
-     result = do_invoke(new_state, function_name, evaluated_arguments)
-    {result, new_state}
-  end
-
-  def evaluate({:literal, value}, state), do: {value, state}
-  def evaluate({:comment, _},     state), do: {nil,   state}
-  def evaluate( nil,              state), do: {nil,   state}
-
-  defp do_invoke(state, function_name, arguments) do
-    apply(state.core, String.to_atom(function_name), arguments)
-  end
-
-  defp evaluate_sequence([], state) do
-    {[], state}
-  end
-
-  defp evaluate_sequence([e | rest], state) do
-    { result,                    new_state } = evaluate e, state
-    { other_results,            last_state } = evaluate_sequence rest, new_state
-    { [result | other_results], last_state }
-  end
-
-end
-
-defmodule DerpyScript.Runner do
-  alias DerpyScript.Interpreter
-  alias DerpyScript.CoreFunctions
-  alias DerpyScript.Parser
-
-  def main(arguments) do
-    case arguments do
-      [file_name] ->
-        parse(file_name) |> run
-      ["--parse", file_name] ->
-        parse(file_name) |> print
-      _ ->
-        IO.puts "Give the filename as the one and only argument."
-        System.halt(1)
-    end
-  end
-
-  defp parse(file_name) do
-    file_name
-      |> File.read!
-      |> Parsable.parse!(Parser.script)
-  end
-
-  defp print(script) do
-    IO.inspect script
-  end
-
-  defp run(script) do
-    Interpreter.evaluate(script, %Interpreter.State{core: CoreFunctions})
   end
 
 end
