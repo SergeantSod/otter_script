@@ -50,7 +50,7 @@ defmodule DerpyScript.Interpreter do
 
   def evaluate({:invocation, function_name, arguments}, state) do
     {evaluated_arguments, new_state} = evaluate_sequence arguments, state
-     result = do_invoke(new_state, function_name, evaluated_arguments)
+    {result, _        } = do_invoke(new_state, function_name, evaluated_arguments)
     {result, new_state}
   end
 
@@ -71,10 +71,11 @@ defmodule DerpyScript.Interpreter do
   end
 
   def evaluate({:recursion, arguments}, state) do
-    { left_result, state } = evaluate(left, state)
-    { right_result, state } = evaluate(right, state)
-    result = state.core.handle_infix operator, left_result, right_result
-    {result, state}
+    #TODO handle stack empty
+    current_function = hd state.stack
+    #Pull argument evaluation inside do_invoke
+    {evaluated_arguments, state} = evaluate_sequence arguments, state
+    do_invoke state, current_function, evaluated_arguments
   end
 
   def evaluate({:literal, value}, state), do: {value, state}
@@ -85,7 +86,8 @@ defmodule DerpyScript.Interpreter do
     if Map.has_key? state.bindings, function do
       do_invoke state, state.bindings[function], arguments
     else
-      state.core.handle_function function, arguments
+      result = state.core.handle_function function, arguments
+      {result, state}
     end
   end
 
@@ -99,7 +101,7 @@ defmodule DerpyScript.Interpreter do
       bindings: new_bindings,
       stack: [function | state.stack ]
     }
-    {_, result} = evaluate(function.body, state_for_call)
+    {result, _ } = evaluate(function.body, state_for_call)
     {result, state}
   end
 

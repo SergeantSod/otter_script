@@ -194,7 +194,7 @@ defmodule DerpyScript.Parser do
   end
 
   def infix_expression do
-    infix_expression choice ~w(- + * <= >= < > && || /)
+    infix_expression choice ~w(- + * <= >= == < > && || /)
   end
 
   defp infix_expression(operator) do
