@@ -5,14 +5,42 @@ defmodule DerpyScript.Interpreter do
   end
 
   defmodule Function do
-    @derive [Access]
+    import Enum
     defstruct arguments: [], body: [], closure: %{}
+
+    def bind_arguments!(function, arguments) do
+      unless length(function.arguments) == length(arguments) do
+        raise ScriptError, message: "Needs exactly #{length(function.arguments)} arguments."
+      end
+
+      function.arguments
+        |> zip(arguments)
+        |> into(function.closure)
+    end
   end
 
   defmodule State do
-    @derive [Access]
+    import Map
+
     defstruct bindings: %{}, stack: [], core: nil
+
+    def bind_variable(state, name, value) do
+      %{ state | bindings: put(state.bindings, name, value) }
+    end
+
+    def bound?(state, name) do
+      has_key? state.bindings, name
+    end
+
+    def for_call(state, function, arguments) do
+      %{
+        state |
+        bindings: Function.bind_arguments!(function, arguments),
+        stack: [function | state.stack ]
+      }
+    end
   end
+
 
   def evaluate([], state) do
     {nil, state}
@@ -28,9 +56,8 @@ defmodule DerpyScript.Interpreter do
   end
 
   def evaluate({:assignment, variable, expression}, state) do
-    {result, new_state} = evaluate(expression, state)
-    new_state = put_in new_state, [:bindings, variable], result
-    {result, new_state}
+    {result, state} = evaluate(expression, state)
+    {result, State.bind_variable(state, variable, result)}
   end
 
   def evaluate({:function, arguments, body}, state) do
@@ -45,7 +72,7 @@ defmodule DerpyScript.Interpreter do
   end
 
   def evaluate({:reference, variable_name}, state) do
-    if Map.has_key? state.bindings, variable_name do
+    if State.bound?(state, variable_name) do
       {state.bindings[variable_name], state}
     else
       raise ScriptError, message: "Variable #{variable_name} is undefined."
@@ -53,6 +80,7 @@ defmodule DerpyScript.Interpreter do
   end
 
   def evaluate({:invocation, function_name, arguments}, state) do
+    #Pull argument evaluation inside do_invoke
     {evaluated_arguments, new_state} = evaluate_sequence arguments, state
     {result, _        } = do_invoke(new_state, function_name, evaluated_arguments)
     {result, new_state}
@@ -87,7 +115,7 @@ defmodule DerpyScript.Interpreter do
   def evaluate( nil,              state), do: {nil,   state}
 
   defp do_invoke(state, function, arguments) when is_binary(function) do
-    if Map.has_key? state.bindings, function do
+    if State.bound?(state, function) do
       do_invoke state, state.bindings[function], arguments
     else
       result = state.core.function function, arguments
@@ -96,16 +124,7 @@ defmodule DerpyScript.Interpreter do
   end
 
   defp do_invoke(state, %Function{}=function, arguments) do
-    #TODO Raise error for arity
-    new_bindings =
-      function.arguments
-        |> Enum.zip(arguments)
-        |> Enum.into(function.closure)
-    state_for_call = %State{ state |
-      bindings: new_bindings,
-      stack: [function | state.stack ]
-    }
-    {result, _ } = evaluate(function.body, state_for_call)
+    {result, _ } = evaluate(function.body, State.for_call(state, function, arguments))
     {result, state}
   end
 
