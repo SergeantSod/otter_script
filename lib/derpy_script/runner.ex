@@ -6,27 +6,34 @@ defmodule DerpyScript.Runner do
   def main(arguments) do
     case arguments do
       [file_name] ->
-        parse(file_name) |> run
+        file_name
+          |> File.read!
+          |> run
       ["--parse", file_name] ->
-        parse(file_name) |> print
+        file_name
+          |> File.read!
+          |> debug
       _ ->
         IO.puts "Give the filename as the one and only argument."
         System.halt(1)
     end
   end
 
-  defp parse(file_name) do
-    file_name
-      |> File.read!
-      |> Parsable.parse!(Parser.script)
+  defp parse(script) do
+    Parsable.parse!(script, Parser.script)
   end
 
-  defp print(script) do
-    IO.inspect script
+  def debug(script) do
+    script
+      |> parse
+      |> IO.inspect
   end
 
-  defp run(script) do
-    Interpreter.evaluate(script, %Interpreter.State{core: Core})
+  def run(script) do
+    script
+      |> parse
+      |> Interpreter.evaluate(%Interpreter.State{core: Core})
+      |> elem(0)
   end
 
 end

@@ -1,5 +1,9 @@
 defmodule DerpyScript.Interpreter do
 
+  defmodule ScriptError do
+    defexception message: "Unknown script error."
+  end
+
   defmodule Function do
     @derive [Access]
     defstruct arguments: [], body: [], closure: %{}
@@ -44,7 +48,7 @@ defmodule DerpyScript.Interpreter do
     if Map.has_key? state.bindings, variable_name do
       {state.bindings[variable_name], state}
     else
-      raise "Variable #{variable_name} is undefined."
+      raise ScriptError, message: "Variable #{variable_name} is undefined."
     end
   end
 
@@ -66,7 +70,7 @@ defmodule DerpyScript.Interpreter do
   def evaluate({:infix, operator, left, right}, state) do
     { left_result, state } = evaluate(left, state)
     { right_result, state } = evaluate(right, state)
-    result = state.core.handle_infix operator, left_result, right_result
+    result = state.core.operator operator, left_result, right_result
     {result, state}
   end
 
@@ -86,7 +90,7 @@ defmodule DerpyScript.Interpreter do
     if Map.has_key? state.bindings, function do
       do_invoke state, state.bindings[function], arguments
     else
-      result = state.core.handle_function function, arguments
+      result = state.core.function function, arguments
       {result, state}
     end
   end

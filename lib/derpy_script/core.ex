@@ -1,31 +1,43 @@
 defmodule DerpyScript.Core do
 
-  def handle_function("print", [something]) do
-    IO.puts something
+  def function("print", arguments) do
+    arguments
+      |> Enum.join
+      |> IO.puts
+    nil
   end
 
-  def handle_function("not", [something]) do
+  def function("not", [something]) do
     not(something)
   end
 
-  def handle_infix("<=", left, right) do
+  def operator("<=", left, right) do
     left <= right
   end
 
-  def handle_infix(">=", left, right) do
+  def operator(">=", left, right) do
     left >= right
   end
 
-  def handle_infix("==", left, right) do
+  def operator("==", left, right) do
     left == right
   end
 
-  def handle_infix("-", left, right) do
+  def operator("-", left, right) do
     left - right
   end
 
-  def handle_infix("+", left, right) do
+  def operator("+", left, right) do
     left + right
   end
+
+  def operator("*", left, right) do
+    left * right
+  end
+
+  def operator("/", left, right) do
+    left / right
+  end
+
 
 end
