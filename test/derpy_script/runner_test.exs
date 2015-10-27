@@ -8,6 +8,10 @@ defmodule DerpyScript.RunnerTest do
     assert 12 == run """
                      12
                      """
+
+    assert -12== run """
+                     -12
+                     """
   end
 
   test "evaluates string literals" do

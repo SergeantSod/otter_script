@@ -37,9 +37,12 @@ defmodule DerpyScript.Parser.Literals do
   import Parsable.Helpers
 
   def integer do
-    match ~r/(\d+)/, [digits] do
+    match ~r/(-?)(\d+)/, [negated, digits] do
       {result, ""} = Integer.parse digits
-      result
+      case negated do
+        ""  ->  result
+        "-" -> -result
+      end
     end
   end
 

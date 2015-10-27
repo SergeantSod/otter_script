@@ -15,7 +15,8 @@ defmodule DerpyScript.ParserTest do
   end
 
   test "parses integer literals" do
-    assert_parse literal, "123456789", {:literal, 123456789}
+    assert_parse literal, "123456789",  {:literal,  123456789}
+    assert_parse literal, "-123456789", {:literal, -123456789}
   end
 
   test "parses string literals" do
