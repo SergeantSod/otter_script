@@ -4,6 +4,27 @@ defmodule DerpyScript.Interpreter do
     defexception message: "Unknown script error."
   end
 
+  defmodule CoreFunction do
+    defstruct arity: 0, implementation: nil
+
+    def invoke(function, state, arguments) do
+      unless function.arity == length(arguments) do
+        raise ScriptError, message: "Needs exactly #{function.arity} arguments."
+      end
+      function.implementation.(arguments, state)
+    end
+
+    def pure(arity, implementation) do
+      %CoreFunction{
+        arity: arity,
+        implementation: fn (arguments, state) ->
+          { apply(implementation, arguments), state }
+        end
+      }
+    end
+
+  end
+
   defmodule Function do
     import Enum
     defstruct arguments: [], body: [], closure: %{}
@@ -39,6 +60,18 @@ defmodule DerpyScript.Interpreter do
         stack: [function | state.stack ]
       }
     end
+
+    def core_function(state, name, arity, implementation) do
+      bind_variable state, to_string(name), %CoreFunction{
+        arity: arity,
+        implementation: implementation
+      }
+    end
+
+    def pure_core_function(state, name, arity, implementation) do
+      bind_variable state, to_string(name), CoreFunction.pure(arity, implementation)
+    end
+
   end
 
 
@@ -96,10 +129,7 @@ defmodule DerpyScript.Interpreter do
   end
 
   def evaluate({:infix, operator, left, right}, state) do
-    { left_result, state } = evaluate(left, state)
-    { right_result, state } = evaluate(right, state)
-    result = state.core.operator operator, left_result, right_result
-    {result, state}
+    evaluate({:invocation, operator, [left, right]}, state)
   end
 
   def evaluate({:recursion, arguments}, state) do
@@ -118,14 +148,17 @@ defmodule DerpyScript.Interpreter do
     if State.bound?(state, function) do
       do_invoke state, state.bindings[function], arguments
     else
-      result = state.core.function function, arguments
-      {result, state}
+      raise ScriptError, message: "Function #{function} is undefined."
     end
   end
 
   defp do_invoke(state, %Function{}=function, arguments) do
     {result, _ } = evaluate(function.body, State.for_call(state, function, arguments))
     {result, state}
+  end
+
+  defp do_invoke(state, %CoreFunction{}=function, arguments) do
+    CoreFunction.invoke(function, state, arguments)
   end
 
   defp evaluate_sequence([], state) do

@@ -75,7 +75,7 @@ defmodule DerpyScript.ParserTest do
                     1234
                     true
                   end"
-    assert_parse block, 
+    assert_parse block,
       some_block, [
         {:assignment, "a", {:reference, "b"}},
         {:literal, 1234},

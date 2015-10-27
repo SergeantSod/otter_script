@@ -30,9 +30,10 @@ defmodule DerpyScript.Runner do
   end
 
   def run(script) do
+    initial_state = DerpyScript.Core.expose(%Interpreter.State{})
     script
       |> parse
-      |> Interpreter.evaluate(%Interpreter.State{core: Core})
+      |> Interpreter.evaluate(initial_state)
       |> elem(0)
   end
 
