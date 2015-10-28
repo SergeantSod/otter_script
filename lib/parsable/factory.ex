@@ -28,14 +28,17 @@ defmodule Parsable.Factory do
     {:optional, of}
   end
 
+  #TODO Naming
   def match(of, with) do
     {:match, of, with}
   end
 
+  #TODO Naming
   def check(condition, actual) do
     {:check, condition, actual}
   end
 
+  #TODO Naming
   def prevent(condition, actual) do
     {:prevent, condition, actual}
   end
@@ -46,6 +49,7 @@ defmodule Parsable.Factory do
     end
   end
 
+  #TODO Naming
   defmacro match(parser, match, do: block) do
     quote do
       match unquote(parser), fn x ->

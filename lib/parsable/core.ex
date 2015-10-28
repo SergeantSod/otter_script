@@ -12,6 +12,8 @@ defmodule Parsable.Core do
     end
   end
 
+  #TODO Maybe pull out this method onto top-level:
+  # Parsable.parse
   def parse!(source, spec) do
     case parse(source, spec) do
       {result, ""} -> result
