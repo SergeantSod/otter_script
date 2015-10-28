@@ -1,6 +1,6 @@
-defmodule DerpyScript.Runner do
-  alias DerpyScript.Interpreter
-  alias DerpyScript.Core
+defmodule OtterScript.Runner do
+  alias OtterScript.Interpreter
+  alias OtterScript.Core
 
   def main(arguments) do
     case arguments do
@@ -19,7 +19,7 @@ defmodule DerpyScript.Runner do
   end
 
   defp parse(script) do
-    Parsable.Core.parse!(script, DerpyScript.Parser.Script.script)
+    Parsable.Core.parse!(script, OtterScript.Parser.Script.script)
   end
 
   def debug(script) do
@@ -29,7 +29,7 @@ defmodule DerpyScript.Runner do
   end
 
   def run(script) do
-    initial_state = DerpyScript.Core.expose(%Interpreter.State{})
+    initial_state = OtterScript.Core.expose(%Interpreter.State{})
     script
       |> parse
       |> Interpreter.evaluate(initial_state)

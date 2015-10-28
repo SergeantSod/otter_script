@@ -1,7 +1,7 @@
 #TODO Naming
-defmodule DerpyScript.Core do
+defmodule OtterScript.Core do
 
-  import DerpyScript.Interpreter.State
+  import OtterScript.Interpreter.State
 
   def expose(state) do
     #TODO Make less ugly

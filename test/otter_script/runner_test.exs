@@ -1,9 +1,9 @@
 #TODO Sync up naming with implementation
-defmodule DerpyScript.RunnerTest do
+defmodule OtterScript.RunnerTest do
   use ExUnit.Case
   import ExUnit.CaptureIO
 
-  import DerpyScript.Runner, only: [run: 1]
+  import OtterScript.Runner, only: [run: 1]
 
   test "evaluates integer literals" do
     assert 12 == run """

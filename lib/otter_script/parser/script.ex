@@ -1,8 +1,8 @@
 #TODO Naming
-defmodule DerpyScript.Parser.Script do
+defmodule OtterScript.Parser.Script do
   import Parsable.Factory
   import Parsable.Bling
-  import DerpyScript.Parser.Literals
+  import OtterScript.Parser.Literals
 
   def script do
     many line
@@ -78,7 +78,7 @@ defmodule DerpyScript.Parser.Script do
   end
 
   def literal do
-    import DerpyScript.Parser.Literals
+    import OtterScript.Parser.Literals
     match choice(integer, string, boolean), value do
       {:literal, value}
     end

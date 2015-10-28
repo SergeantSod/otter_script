@@ -1,4 +1,4 @@
-defmodule DerpyScript.Interpreter do
+defmodule OtterScript.Interpreter do
 
   defmodule ScriptError do
     defexception message: "Unknown script error."

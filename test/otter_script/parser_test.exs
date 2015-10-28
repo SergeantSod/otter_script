@@ -1,9 +1,9 @@
 #TODO Sync up naming with implementation
-defmodule DerpyScript.ParserTest do
+defmodule OtterScript.ParserTest do
   use ExUnit.Case
 
   import Parsable.Core, only: [parse!: 2]
-  import DerpyScript.Parser.Script
+  import OtterScript.Parser.Script
 
   defp assert_parse(parser, input, expected) when is_binary(input) do
     assert parse!(input, parser) == expected
@@ -149,7 +149,7 @@ defmodule DerpyScript.ParserTest do
 
   test "parses a script" do
     some_script = ~S"""
-                    print("Welcome to DerpyScript.")
+                    print("Welcome to OtterScript.")
 
                     # The fib function
                     fib:(x)=> do
@@ -164,7 +164,7 @@ defmodule DerpyScript.ParserTest do
     assert_parse script,
       some_script,
       [
-        {:invocation, "print", [literal: "Welcome to DerpyScript."]},
+        {:invocation, "print", [literal: "Welcome to OtterScript."]},
         nil,
         {:comment, " The fib function"},
         {:assignment, "fib",

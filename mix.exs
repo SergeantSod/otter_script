@@ -1,8 +1,8 @@
-defmodule ParserCombinators.Mixfile do
+defmodule OtterScript.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :parser_combinators,
+    [app: :otter_script,
      version: "0.0.1",
      elixir: "~> 1.0",
      deps: deps,
@@ -31,7 +31,7 @@ defmodule ParserCombinators.Mixfile do
 
   defp escript do
     [
-      main_module: DerpyScript.Runner
+      main_module: OtterScript.Runner
     ]
   end
 end

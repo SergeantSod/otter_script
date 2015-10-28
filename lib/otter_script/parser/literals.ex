@@ -1,4 +1,4 @@
-defmodule DerpyScript.Parser.Literals do
+defmodule OtterScript.Parser.Literals do
   import Parsable.Factory
   import Parsable.Bling
 
