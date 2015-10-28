@@ -135,6 +135,14 @@ defmodule OtterScript.RunnerTest do
                      """
   end
 
+  test "error for recursion on top-level" do
+    assert_raise ScriptError, fn ->
+      run """
+          ~(1)
+          """
+    end
+  end
+
   test "evaluates higher-order functions" do
     assert 12 == run """
                      adding:(offset)=>do

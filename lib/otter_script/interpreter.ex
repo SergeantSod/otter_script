@@ -133,11 +133,14 @@ defmodule OtterScript.Interpreter do
   end
 
   def evaluate({:recursion, arguments}, state) do
-    #TODO handle stack empty
-    current_function = hd state.stack
-    #Pull argument evaluation inside do_invoke
-    {evaluated_arguments, state} = evaluate_sequence arguments, state
-    do_invoke state, current_function, evaluated_arguments
+    case state.stack do
+      [current_function | _] ->
+        #TODO Pull argument evaluation into do_invoke
+        {evaluated_arguments, state} = evaluate_sequence arguments, state
+        do_invoke state, current_function, evaluated_arguments
+      _ ->
+        raise ScriptError, message: "Cannot use recursion on top level."
+    end
   end
 
   def evaluate({:literal, value}, state), do: {value, state}
