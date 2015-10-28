@@ -1,7 +1,6 @@
 defmodule DerpyScript.Runner do
   alias DerpyScript.Interpreter
   alias DerpyScript.Core
-  alias DerpyScript.Parser
 
   def main(arguments) do
     case arguments do
@@ -20,7 +19,7 @@ defmodule DerpyScript.Runner do
   end
 
   defp parse(script) do
-    Parsable.parse!(script, Parser.script)
+    Parsable.Core.parse!(script, DerpyScript.Parser.Core.script)
   end
 
   def debug(script) do

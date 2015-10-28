@@ -1,8 +1,8 @@
 defmodule DerpyScript.ParserTest do
   use ExUnit.Case
 
-  import Parsable, only: [parse!: 2]
-  import DerpyScript.Parser
+  import Parsable.Core, only: [parse!: 2]
+  import DerpyScript.Parser.Core
 
   defp assert_parse(parser, input, expected) when is_binary(input) do
     assert parse!(input, parser) == expected
@@ -15,8 +15,8 @@ defmodule DerpyScript.ParserTest do
   end
 
   test "parses integer literals" do
-    assert_parse literal, "123456789",  {:literal,  123456789}
-    assert_parse literal, "-123456789", {:literal, -123456789}
+    assert_parse literal, "123456789",  { :literal,  123456789 }
+    assert_parse literal, "-123456789", { :literal, -123456789 }
   end
 
   test "parses string literals" do
@@ -24,8 +24,8 @@ defmodule DerpyScript.ParserTest do
   end
 
   test "parses boolean literals" do
-    assert_parse literal, "true",  {:literal, true}
-    assert_parse literal, "false", {:literal, false}
+    assert_parse literal, "true",  { :literal,  true }
+    assert_parse literal, "false", { :literal, false }
   end
 
   test "parses an assignment" do

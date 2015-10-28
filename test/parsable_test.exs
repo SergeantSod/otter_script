@@ -1,7 +1,7 @@
 defmodule ParsableTest do
   use ExUnit.Case
 
-  import Parsable, only: [parse!: 2]
+  import Parsable.Core, only: [parse!: 2]
   import Parsable.Factory
 
 

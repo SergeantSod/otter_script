@@ -1,3 +1,4 @@
+#TODO Naming
 defmodule DerpyScript.Core do
 
   import DerpyScript.Interpreter.State
@@ -14,44 +15,5 @@ defmodule DerpyScript.Core do
       |> pure_core_function(:*,  2, &(&1 * &2))
       |> pure_core_function(:/,  2, &(&1 / &2))
   end
-
-  # def function("print", arguments) do
-  #   arguments
-  #     |> Enum.join
-  #     |> IO.puts
-  #   nil
-  # end
-  #
-  # def function("not", [something]) do
-  #   not(something)
-  # end
-  #
-  # def operator("<=", left, right) do
-  #   left <= right
-  # end
-  #
-  # def operator(">=", left, right) do
-  #   left >= right
-  # end
-  #
-  # def operator("==", left, right) do
-  #   left == right
-  # end
-  #
-  # def operator("-", left, right) do
-  #   left - right
-  # end
-  #
-  # def operator("+", left, right) do
-  #   left + right
-  # end
-  #
-  # def operator("*", left, right) do
-  #   left * right
-  # end
-  #
-  # def operator("/", left, right) do
-  #   left / right
-  # end
 
 end
