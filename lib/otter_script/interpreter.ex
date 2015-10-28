@@ -43,7 +43,7 @@ defmodule OtterScript.Interpreter do
   defmodule State do
     import Map
 
-    defstruct bindings: %{}, stack: [], core: nil
+    defstruct bindings: %{}, stack: []
 
     def bind_variable(state, name, value) do
       %{ state | bindings: put(state.bindings, name, value) }
