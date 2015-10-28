@@ -4,6 +4,7 @@ defmodule OtterScript.RunnerTest do
   import ExUnit.CaptureIO
 
   import OtterScript.Runner, only: [run: 1]
+  alias OtterScript.Interpreter.ScriptError
 
   test "evaluates integer literals" do
     assert 12 == run """
@@ -64,8 +65,22 @@ defmodule OtterScript.RunnerTest do
   test "evaluates assignments" do
     assert 12 == run """
                      a=12
+                     """
+  end
+
+  test "evaluates variable reference" do
+    assert 12 == run """
+                     a=12
                      a
                      """
+  end
+
+  test "errors for reference to undefined variable" do
+    assert_raise ScriptError, fn ->
+      run """
+          undefined_variable
+          """
+    end
   end
 
   test "evaluates simple print statements" do
@@ -94,11 +109,19 @@ defmodule OtterScript.RunnerTest do
                      """
   end
 
-  test "evaluates a function call" do
+  test "evaluates a function invocation" do
     assert 12 == run """
                      addition:(a,b)=> a + b
                      addition(6,6)
                      """
+  end
+
+  test "errors for invocation of undefined function" do
+    assert_raise ScriptError, fn ->
+      run """
+          undefined_function()
+          """
+    end
   end
 
   test "evaluates a recursive function" do
