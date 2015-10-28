@@ -1,0 +1,4 @@
+print("Look at the beautiful datatypes I have:")
+print(true)
+print(false)
+print(42)

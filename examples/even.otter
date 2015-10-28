@@ -1,0 +1,13 @@
+even:(x)=> do
+  if x == 0 then true else do
+    if x==1 then false else do
+      not(~(x-1))
+    end
+  end
+end
+
+print("Is 2 an even number?")
+print(even(2))
+
+print("Is 300000 an even number?")
+print(even(300000))

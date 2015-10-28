@@ -1,0 +1,31 @@
+# Fibonacci Function
+fib:(x)=> do
+  if x <= 1 then 1 else do
+    ~(x - 1) + ~(x - 2)
+  end
+end
+
+# Function composition
+comp:(outer, inner)=>do
+  (x) => do
+    outer(inner(x))
+  end
+end
+
+# A loop as a higher-order function
+
+for_range:(from, to, fun) => do
+  if from <= to then do
+    fun(from)
+
+    # Since all functions are anonymous, recursion
+    # is done with the recursion operator "~"
+
+    ~(from+1, to, fun)
+  end
+end
+
+print("Welcome to OtterScript. Enjoy some Fibonacci numbers:")
+
+# Wow, such functional programming.
+for_range(1, 25, comp(print, fib))

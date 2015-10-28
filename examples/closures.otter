@@ -1,0 +1,11 @@
+a_fine_young_offset_function_for:(offset)=> do
+  (x)=> do
+    offset + x
+  end
+end
+
+with_a_bakers_dozen_extra:a_fine_young_offset_function_for(13)
+
+
+print("OtterScript has closures:")
+print(with_a_bakers_dozen_extra(29))
