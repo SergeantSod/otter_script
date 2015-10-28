@@ -1,8 +1,9 @@
+#TODO Sync up naming with implementation
 defmodule DerpyScript.ParserTest do
   use ExUnit.Case
 
   import Parsable.Core, only: [parse!: 2]
-  import DerpyScript.Parser.Core
+  import DerpyScript.Parser.Script
 
   defp assert_parse(parser, input, expected) when is_binary(input) do
     assert parse!(input, parser) == expected

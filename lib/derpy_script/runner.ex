@@ -19,7 +19,7 @@ defmodule DerpyScript.Runner do
   end
 
   defp parse(script) do
-    Parsable.Core.parse!(script, DerpyScript.Parser.Core.script)
+    Parsable.Core.parse!(script, DerpyScript.Parser.Script.script)
   end
 
   def debug(script) do

@@ -1,5 +1,5 @@
 #TODO Naming
-defmodule DerpyScript.Parser.Core do
+defmodule DerpyScript.Parser.Script do
   import Parsable.Factory
   import Parsable.Bling
   import DerpyScript.Parser.Literals
