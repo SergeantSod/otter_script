@@ -157,6 +157,7 @@ defmodule OtterScript.Interpreter do
 
   defp do_invoke(state, %Function{}=function, arguments) do
     {result, _ } = evaluate(function.body, State.for_call(state, function, arguments))
+    # Functions are pure in that they cannot directly affect the outer state
     {result, state}
   end
 
