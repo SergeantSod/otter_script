@@ -3,6 +3,7 @@ defmodule Parsable.Core do
   alias Parsable.ParseError
 
   defmacrop try_parse(do: do_clause, else: else_clause) do
+    #TODO It's somewhat ugly how we use the ParseError for control flow.
     quote do
       try do
         unquote(do_clause)
