@@ -9,5 +9,8 @@ end
 print("Is 2 an even number?")
 print(even(2))
 
+print("Is 37 an even number?")
+print(even(37))
+
 print("Is 300000 an even number?")
 print(even(300000))
