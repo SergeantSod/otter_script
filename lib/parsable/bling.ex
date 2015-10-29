@@ -1,8 +1,7 @@
-#TODO: This is generally useful and should be pulled into Parsable.
 #TODO Naming.
 #TODO API design? Keyword arguments for readability? Same applies to Factory
 defmodule Parsable.Bling do
-  
+
   import Parsable.Factory
 
   #TODO Naming.
