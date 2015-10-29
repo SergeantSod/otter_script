@@ -112,13 +112,6 @@ defmodule OtterScript.Interpreter do
     end
   end
 
-  def evaluate({:invocation, function_name, arguments}, state) do
-    #Pull argument evaluation inside do_invoke
-    {evaluated_arguments, new_state} = evaluate_sequence arguments, state
-    {result, _        } = do_invoke(new_state, function_name, evaluated_arguments)
-    {result, new_state}
-  end
-
   def evaluate({:if, condition, if_case, else_case}, state) do
     {condition_result, state} = evaluate(condition, state)
     if condition_result do
@@ -132,12 +125,18 @@ defmodule OtterScript.Interpreter do
     evaluate({:invocation, operator, [left, right]}, state)
   end
 
+  def evaluate({:invocation, function_name, arguments}, state) do
+    if State.bound?(state, function_name) do
+      invoke state.bindings[function_name], arguments, state
+    else
+      raise ScriptError, message: "Function #{function_name} is undefined."
+    end
+  end
+
   def evaluate({:recursion, arguments}, state) do
     case state.stack do
       [current_function | _] ->
-        #TODO Pull argument evaluation into do_invoke
-        {evaluated_arguments, state} = evaluate_sequence arguments, state
-        do_invoke state, current_function, evaluated_arguments
+        invoke current_function, arguments, state
       _ ->
         raise ScriptError, message: "Cannot use recursion on top level."
     end
@@ -147,22 +146,17 @@ defmodule OtterScript.Interpreter do
   def evaluate({:comment, _},     state), do: {nil,   state}
   def evaluate( nil,              state), do: {nil,   state}
 
-  defp do_invoke(state, function, arguments) when is_binary(function) do
-    if State.bound?(state, function) do
-      do_invoke state, state.bindings[function], arguments
-    else
-      raise ScriptError, message: "Function #{function} is undefined."
+  defp invoke(function, arguments, state) do
+    {evaluated_arguments, state} = evaluate_sequence arguments, state
+    case function do
+      %Function{} ->
+        {result, _ } = evaluate function.body, State.for_call(state, function, evaluated_arguments)
+        # Functions are pure in that they cannot directly affect the outer state.
+        {result, state}
+      %CoreFunction{} ->
+        # Core Functions can modify the outer state.
+        CoreFunction.invoke(function, state, evaluated_arguments)
     end
-  end
-
-  defp do_invoke(state, %Function{}=function, arguments) do
-    {result, _ } = evaluate(function.body, State.for_call(state, function, arguments))
-    # Functions are pure in that they cannot directly affect the outer state
-    {result, state}
-  end
-
-  defp do_invoke(state, %CoreFunction{}=function, arguments) do
-    CoreFunction.invoke(function, state, arguments)
   end
 
   defp evaluate_sequence([], state) do
