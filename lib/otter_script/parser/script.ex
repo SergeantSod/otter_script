@@ -9,23 +9,13 @@ defmodule OtterScript.Parser.Script do
   end
 
   def line do
-    choice(expression_line, empty_line, comment_line)
+    match [ space, optional(choice(expression, comment)), space, "\n" ],
+          [ _,     line_content,                          _,     _    ], do: line_content
   end
 
-  def empty_line do
-    # TODO nil is also output of optional =>
-    # should be possible to inline the *_line stuff so we have EOL in less places.
-    match [space, "\n"], _, do: nil
-  end
-
-  def comment_line do
-    match [space, "#", ~r/(.*)/,  "\n"],
-          [_,     _,   [content], _   ], do: {:comment, content}
-  end
-
-  def expression_line do
-    match [ space, expression, space, "\n" ],
-          [ _,     result,     _,     _    ], do: result
+  def comment do
+    match ["#", ~r/(.*)/ ],
+          [_,   [content]], do: {:comment, content}
   end
 
   def space do
