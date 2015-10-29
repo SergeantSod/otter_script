@@ -1,6 +1,5 @@
 defmodule OtterScript.Runner do
   alias OtterScript.Interpreter
-  alias OtterScript.Core
 
   def main(arguments) do
     case arguments do
