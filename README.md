@@ -34,7 +34,7 @@ Once you have mix ready, you can run the tests:
 mix test
 ```
 
-Then you can compile the interepreter to an escript:
+Then you can compile the interpreter to an escript:
 
 ```bash
 mix escript.build
@@ -54,4 +54,14 @@ Or look at the parse tree:
 
 TODO:
 * Resolve inline TODOs
-* Flesh out higher-level plan
+* Polish parser combinators:
+  * Use a protocol (maybe)
+  * Use `with` special form for recovery from parse failure instead of an exception
+* Polish `OtterScript.Core`
+  * Add syntactic sugar to all functions of a given module
+    * Attributes on the function level can help define call-semantics
+      * Name that it is exposed as
+      * Varargs?
+  * Expose more stuff in the core library
+* Finish this list of TODOs
+* Profit
